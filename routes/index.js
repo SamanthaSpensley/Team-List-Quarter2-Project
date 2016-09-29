@@ -14,67 +14,81 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-router.get('/chat', function(req, res, next) {
-  res.render('chat')
+//Get Video/Chat Page
+router.get('/chat', auth.ensureAuthenticated,  function(req, res, next) {
+  query.getAllUsersByIdAndGoogleProfileId(req.user)
+  .then ((userdata) => {
+    res.render('chat', {user: userdata})
+  })
 })
 
-router.get('/profile', auth.ensureAuthenticated,  function(req, res, next) {
-  // query.getAllUsers()
-  // .then(function(users) {
-  //   res.render('profile', {users: users})
-  // })
-  console.log(req.user)
-  res.render('profile', {user: req.user})
-})
-
+//Register New Users
 router.get('/register', auth.ensureAuthenticated, function(req, res, next) {
-  console.log('this is the req.user.id in /register :', req.user.id)
-  console.log('this is the req.user[0].id in /register :', req.user[0].id)
-
-  query.doesIDExist(req.user.id, req.user[0].id)
-  .then((user)=>{
-    if (!user.user_name){
-      console.log("inside ")
+  query.getAllUsersByIdAndGoogleProfileId(req.user)
+  .then((userId)=>{
+    if(!userId.user_name){
       res.render('register')
     } else {
-      console.log('user.user_name already exists')
       res.redirect('/chat')
     }
   })
-  .catch((err)=>{
-    console.log(err)
-  })
-  //
-  // console.log("this is req.user: ", req.user)
-  // if (req.user.user_name === undefined) {
-  //   res.render('register')
-  // } else {
-  //   res.redirect('/chat')
-  // }
 });
 
 router.post('/register',   function(req, res, next) {
-  console.log('this is req.user from the post:', req.user)
-  query.insertAdditionalInfo(req.user.id, req.body.user_name, req.body.genre, req.body.instrument, req.body.influence, req.body.bio)
+  query.insertAdditionalInfo(req.user, req.body.user_name, req.body.genre, req.body.instrument, req.body.influence, req.body.bio)
   .then(() =>{
     res.redirect('/chat');
   })
 })
 
-router.get('/edit', function(req, res, next) {
-  res.render('editProfile')
+//Edit Existing Profile
+router.get('/edit', auth.ensureAuthenticated, function(req, res, next) {
+  query.getAllUsersByIdAndGoogleProfileId(req.user)
+  .then ((userdata) => {
+    res.render('editProfile', {user: userdata})
+  })
 })
 
-router.get('/profile', auth.ensureAuthenticated, function(req, res) {
-    res.json(req.body);
-});
+router.post('/edit', function(req, res, next) {
+  query.editProfileById(req.user, req.body.user_name, req.body.genre, req.body.instrument, req.body.influence, req.body.bio)
+  .then(()=>{
+    res.redirect('/chat')
+  })
+})
 
-router.get('/login', function(req, res) {
-    res.render('login', {
-        user: req.user
-    });
-});
+//Delete Profile
+router.post('/delete', auth.ensureAuthenticated, function(req, res, next) {
+  query.deleteProfileById(req.user)
+  .then(() =>{
+    res.redirect('/')
+  })
+})
 
+//Get Admin Page
+router.get('/admin', auth.ensureAuthenticated, function(req, res, next) {
+  query.getAllUsersByIdAndGoogleProfileId(req.user)
+  .then((userdata)=>{
+    if(userdata.admin === true){
+      query.getAllUsers()
+      .then((allusers)=>{
+        res.render('admin', {users: allusers})
+      })
+    } else{
+      res.redirect('/chat')
+    }
+  })
+})
+
+//Add an Admin
+router.post('/addAdmin/:id', auth.ensureAuthenticated, function(req, res, next) {
+    console.log(req.params.id);
+  query.addAdmin(req.params.id)
+  .then(() =>{
+    res.redirect('/admin')
+  })
+})
+
+//Google OAuth
 router.get('/auth/google', auth.passport.authenticate('google', {
     scope: [
         'profile', 'email',

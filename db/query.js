@@ -9,10 +9,10 @@ module.exports = {
     return Users();
   },
   getAllUsersByIdAndGoogleProfileId : function(profile){
-    return Users().where('id', profile.id)
+    return Users().where('id', profile.id).first()
   },
-  insertAdditionalInfo: function(id, user_name, genre, instrument, influence, bio, admin) {
-    return Users().where('id', id).update({
+  insertAdditionalInfo: function(user, user_name, genre, instrument, influence, bio, admin) {
+    return Users().where('id',user.id).first().update({
       user_name: user_name,
       genre: genre,
       musical_instrument: instrument,
@@ -21,8 +21,20 @@ module.exports = {
       admin: false
     })
   },
-  doesIDExist: function(user, user2) {
-    return Users().where('id', user).orWhere('id', user2).select('user_name')
+  editProfileById: function(user, user_name, genre, instrument, influence, bio, admin){
+    return Users().where('id', user.id).update({
+      genre: genre,
+      musical_instrument: instrument,
+      influence: influence,
+      bio: bio,
+    })
+  },
+  deleteProfileById: function(user) {
+    return Users().where('id', user.id).first().del()
+  },
+  addAdmin: function(id) {
+    return Users().where('id', id).update({
+      admin: true
+    })
   }
-
 }
